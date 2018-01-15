@@ -10,62 +10,85 @@ firebase.initializeApp(config);
 
 var database = firebase.database();
 
-
-database.ref().on("value",function(snapshot){
+database.ref().on(
+  "value",
+  function(snapshot) {
     var trains = snapshot.val();
     var keys = Object.keys(trains);
     $("#table-body").empty();
 
     for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
+      var key = keys[i];
 
-        var train = trains[key];
+      var train = trains[key];
 
-        console.log(train.name, train.destination, train.frequency);
+      console.log(train.name, train.destination, train.frequency);
 
-        var table = $("#time-data");
+      var table = $("#time-data");
 
-        var lastRow = $('<tr>').appendTo(table.find('tbody:last'));
+      var lastRow = $("<tr>").appendTo(table.find("tbody:last"));
 
-        var tableName = $("<td>").text(train.name);
-        var tableDestination = $("<td>").text(train.destination);
-        var tableFrequency = $("<td>").text(train.frequency);
+      var tableName = $("<td>").text(train.name);
+      var tableDestination = $("<td>").text(train.destination);
+      var tableFrequency = $("<td>").text(train.frequency);
+      var tableNextArrival = $('<td>').text(train.nextTrain);
+      var tableMinutesToTrain = $('<td>').text(train.minutesToTrain);
 
-        lastRow.append(tableName, tableDestination, tableFrequency);
-
-      }
-}, function(errorObject) {
+      lastRow.append(tableName, tableDestination, tableFrequency, tableNextArrival, tableMinutesToTrain);
+    }
+  },
+  function(errorObject) {
     console.log("The read failed: " + errorObject.code);
   }
 );
 
-function clearFields(){
-    $("#name-input").val("");
-    $("#destination-input").val("");
-    $("#first-train-input").val("");
-    $("#frequency-input").val("");
+function clearFields() {
+  $("#name-input").val("");
+  $("#destination-input").val("");
+  $("#first-train-input").val("");
+  $("#frequency-input").val("");
 }
 
 $("#submit").on("click", function() {
+  event.preventDefault();
 
-    event.preventDefault();
+  var name = $("#name-input")
+    .val()
+    .trim();
+  var destination = $("#destination-input")
+    .val()
+    .trim();
+  var firstTrain = $("#first-train-input")
+    .val()
+    .trim();
+  var frequency = $("#frequency-input")
+    .val()
+    .trim();
 
-  var name = $("#name-input").val().trim();
-  var destination = $("#destination-input").val().trim();
-  var firstTrain = $("#first-train-input").val().trim();
-  var frequency = $("#frequency-input").val().trim();
+  var minusYear = moment(firstTrain, "hh:mm").subtract(1, "years");
 
-    var ref = database.ref();
-    var data = {
-        name: name,
-        destination: destination,
-        firstTrain: firstTrain,
-        frequency: frequency
-    }
+  var timeChange = moment().diff(moment(minusYear), "minutes");
 
-    ref.push(data);
-    clearFields();
-  
+  var remainder = timeChange % frequency;
+
+  var minutesToTrain = frequency - remainder;
+
+  var nextTrain = moment().add(minutesToTrain, "minutes").format("hh:mm");
+
+
+
+  var ref = database.ref();
+  var data = {
+    name: name,
+    destination: destination,
+    firstTrain: firstTrain,
+    frequency: frequency,
+    nextTrain: String(nextTrain),
+    minutesToTrain: String(minutesToTrain)
+  };
+
+  ref.push(data);
+  clearFields();
 });
 
 //calculate next train time, push dynamically to database, call value to table
